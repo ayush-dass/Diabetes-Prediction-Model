@@ -8,7 +8,7 @@ This project is a web application built using Streamlit, a Python library for cr
 
 ## Demo
 
-A live demo of the app can be found [here](#) (add your deployment link here once deployed).
+A live demo of the app can be found [here](#)
 
 ## Features
 
