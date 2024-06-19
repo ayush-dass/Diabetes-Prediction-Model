@@ -1,11 +1,29 @@
 import streamlit as st
 import pandas as pd
+import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-from sklearn.svm import SVC
-from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score
+from sklearn.preprocessing import StandardScaler, PolynomialFeatures
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+import pickle
+
+# Load the model and other objects using pickle
+with open('diabetes_model.pkl', 'rb') as file:
+    model_data = pickle.load(file)
+
+best_model = model_data['model']
+
+confusion_matrix = model_data['confusion_matrix']
+
+train_accuracy = model_data['train_accuracy']
+test_accuracy = model_data['test_accuracy']
+
+train_sizes = model_data['learning_curve']['train_sizes']
+train_scores = model_data['learning_curve']['train_scores']
+test_scores = model_data['learning_curve']['test_scores']
+
+cv_scores = model_data['cross_validation']['cv_scores']
+mean_cv_score = model_data['cross_validation']['mean_cv_score']
 
 # Load the dataset
 diabetes_data = pd.read_csv('diabetes.csv')
@@ -14,25 +32,18 @@ diabetes_data = pd.read_csv('diabetes.csv')
 X = diabetes_data.drop('Outcome', axis=1)
 y = diabetes_data['Outcome']
 
-# Standardize the data for SVM and scale the data
+# Polynomial Features and Standardization
+poly = PolynomialFeatures(degree=2, interaction_only=True, include_bias=False)
+X_poly = poly.fit_transform(X)
 scaler = StandardScaler()
-scaler.fit(X)
-standardized_data = scaler.transform(X)
-X = standardized_data
-y = diabetes_data['Outcome']
-
-# Split the data into training and testing sets
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, stratify=y, random_state=2)
-
-# Train the SVM model
-svm_model = SVC(kernel='linear')
-svm_model.fit(X_train, y_train)
+X_scaled = scaler.fit_transform(X_poly)
 
 # Function to predict diabetes
 def predict_diabetes(Pregnancies, Glucose, BloodPressure, SkinThickness, Insulin, BMI, DiabetesPedigreeFunction, Age):
     input_data = [[Pregnancies, Glucose, BloodPressure, SkinThickness, Insulin, BMI, DiabetesPedigreeFunction, Age]]
-    input_data_scaled = scaler.transform(input_data)
-    prediction = svm_model.predict(input_data_scaled)
+    input_data_poly = poly.transform(input_data)
+    input_data_scaled = scaler.transform(input_data_poly)
+    prediction = best_model.predict(input_data_scaled)
     return prediction
 
 # Main title
@@ -57,26 +68,45 @@ if st.sidebar.button('Predict'):
     else:
         st.sidebar.error('Diabetes Detected')
 
-
 # Model Explanation
 st.write('### Model Explanation')
-st.write("""
-Support Vector Machines (SVM) is a supervised machine learning algorithm used for classification tasks.
-In this app, we have trained an SVM model with a linear kernel using the Pima Indians Diabetes dataset.
-         
-The model aims to predict the likelihood of an individual having diabetes based on various health features such as 
-glucose level, BMI, age, etc.
-The model learns patterns from the historical data to make predictions on new, unseen data.
-""")
+st.write("""This app uses an XGBoost classifier to predict whether a patient has diabetes or not. The model is trained on the Pima Indian Diabetes dataset, which contains various features like Glucose, Blood Pressure, BMI, etc. 
+The dataset is preprocessed by handling missing values, outliers, and scaling. The model is trained using hyperparameters obtained from a random search and is evaluated using training and test accuracy, cross-validation score, confusion matrix, and learning curves.""")
 
 # Display dataset
 st.write('### Diabetes Dataset')
 st.write(diabetes_data)
 
 # Display model accuracy
-st.write('### Model Accuracy')
-accuracy = accuracy_score(svm_model.predict(X_test), y_test)
-st.success(f'Model Accuracy: {accuracy:.2f}')
+st.write('### Model Evaluation')
+st.success(f'Training Accuracy: {train_accuracy:.2f}')
+st.success(f'Test Accuracy: {test_accuracy:.2f}')
+
+# Display cross-validation score
+st.write('### Cross-Validation Score and Mean')
+st.success(f'Cross-Validation Scores: {cv_scores}')
+st.success(f'Mean CV Accuracy: {mean_cv_score:.2f}')
+
+# Display confusion matrix
+st.write('### Confusion Matrix')
+cmd = ConfusionMatrixDisplay(confusion_matrix, display_labels=['No Diabetes', 'Diabetes'])
+fig, ax = plt.subplots(figsize=(6, 6))
+cmd.plot(ax=ax)
+st.pyplot(fig)
+
+# Display learning curves
+st.write('### Learning Curves')
+train_scores_mean = np.mean(train_scores, axis=1)
+test_scores_mean = np.mean(test_scores, axis=1)
+
+plt.figure(figsize=(10, 6))
+plt.plot(train_sizes, train_scores_mean, label='Training Accuracy')
+plt.plot(train_sizes, test_scores_mean, label='Validation Accuracy')
+plt.title('Learning Curves')
+plt.xlabel('Training Examples')
+plt.ylabel('Accuracy')
+plt.legend()
+st.pyplot(plt)
 
 # Data visualization - Histogram
 st.write('### Data visualization - Histogram')
@@ -88,7 +118,7 @@ plt.xlabel(selected_feature)
 plt.ylabel('Count')
 st.pyplot(plt)
 
-# Data visualization - Scatter Plot and Correlation Matrix
+# Data visualization - Scatter Plot
 st.write('### Data visualization - Scatter Plot')
 selected_features = st.multiselect('Select features:', diabetes_data.columns[:-1])
 
@@ -112,12 +142,4 @@ plt.figure(figsize=(10, 8))
 sns.heatmap(diabetes_data.corr(), annot=True, cmap='coolwarm', fmt=".2f")
 plt.title('Correlation Matrix')
 st.pyplot(plt)
-
-# Display feature importance
-st.write('### Feature Importance')
-coef_values = svm_model.coef_[0]
-feature_importance = pd.DataFrame({'Feature': diabetes_data.columns[:-1], 'Coefficient': coef_values})
-feature_importance = feature_importance.sort_values(by='Coefficient', ascending=False)
-
-st.write(feature_importance)
 
