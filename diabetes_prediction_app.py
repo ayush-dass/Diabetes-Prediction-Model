@@ -3,6 +3,8 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
+import plotly.express as px
+import plotly.graph_objects as go
 from sklearn.preprocessing import StandardScaler, PolynomialFeatures
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 import pickle
@@ -12,16 +14,12 @@ with open('diabetes_model.pkl', 'rb') as file:
     model_data = pickle.load(file)
 
 best_model = model_data['model']
-
 confusion_matrix = model_data['confusion_matrix']
-
 train_accuracy = model_data['train_accuracy']
 test_accuracy = model_data['test_accuracy']
-
 train_sizes = model_data['learning_curve']['train_sizes']
 train_scores = model_data['learning_curve']['train_scores']
 test_scores = model_data['learning_curve']['test_scores']
-
 cv_scores = model_data['cross_validation']['cv_scores']
 mean_cv_score = model_data['cross_validation']['mean_cv_score']
 
@@ -87,59 +85,57 @@ st.write('### Cross-Validation Score and Mean')
 st.success(f'Cross-Validation Scores: {cv_scores}')
 st.success(f'Mean CV Accuracy: {mean_cv_score:.2f}')
 
-# Display confusion matrix
+# Display confusion matrix using Plotly
 st.write('### Confusion Matrix')
-cmd = ConfusionMatrixDisplay(confusion_matrix, display_labels=['No Diabetes', 'Diabetes'])
-fig, ax = plt.subplots(figsize=(6, 6))
-cmd.plot(ax=ax)
-st.pyplot(fig)
+z = confusion_matrix
+x = ['No Diabetes', 'Diabetes']
+y = ['No Diabetes', 'Diabetes']
+z_text = [[str(y) for y in x] for x in z]
 
-# Display learning curves
+fig = go.Figure(data=go.Heatmap(
+                   z=z,
+                   x=x,
+                   y=y,
+                   hoverongaps=False,
+                   colorscale='Blues',
+                   text=z_text,
+                   texttemplate="%{text}",
+                   textfont={"size":15}))
+
+fig.update_layout(title='Confusion Matrix', xaxis_title='Predicted Label', yaxis_title='True Label')
+st.plotly_chart(fig)
+
+# Display learning curves using Plotly
 st.write('### Learning Curves')
-train_scores_mean = np.mean(train_scores, axis=1)
-test_scores_mean = np.mean(test_scores, axis=1)
+fig = go.Figure()
+fig.add_trace(go.Scatter(x=train_sizes, y=np.mean(train_scores, axis=1), mode='lines', name='Training Accuracy'))
+fig.add_trace(go.Scatter(x=train_sizes, y=np.mean(test_scores, axis=1), mode='lines', name='Validation Accuracy'))
+fig.update_layout(title='Learning Curves', xaxis_title='Training Examples', yaxis_title='Accuracy')
+st.plotly_chart(fig)
 
-plt.figure(figsize=(10, 6))
-plt.plot(train_sizes, train_scores_mean, label='Training Accuracy')
-plt.plot(train_sizes, test_scores_mean, label='Validation Accuracy')
-plt.title('Learning Curves')
-plt.xlabel('Training Examples')
-plt.ylabel('Accuracy')
-plt.legend()
-st.pyplot(plt)
-
-# Data visualization - Histogram
+# Data visualization - Histogram using Plotly
 st.write('### Data visualization - Histogram')
 selected_feature = st.selectbox('Select a feature to visualize:', diabetes_data.columns[:-1])
-plt.figure(figsize=(8, 6))
-sns.histplot(data=diabetes_data, x=selected_feature, hue='Outcome', kde=True, palette='Set1', alpha=0.7)
-plt.title(f'Distribution of {selected_feature}')
-plt.xlabel(selected_feature)
-plt.ylabel('Count')
-st.pyplot(plt)
+fig = px.histogram(diabetes_data, x=selected_feature, color='Outcome', barmode='overlay', nbins=50)
+fig.update_layout(title=f'Distribution of {selected_feature}')
+st.plotly_chart(fig)
 
-# Data visualization - Scatter Plot
+# Data visualization - Scatter Plot using Plotly
 st.write('### Data visualization - Scatter Plot')
-selected_features = st.multiselect('Select features:', diabetes_data.columns[:-1])
+selected_features = st.multiselect('Select features:', diabetes_data.columns[:-1], default=['Pregnancies', 'Glucose'])
 
 if len(selected_features) == 2:
     # Scatter Plot
-    plt.figure(figsize=(8, 6))
-    sns.scatterplot(data=diabetes_data, x=selected_features[0], y=selected_features[1], hue='Outcome', palette='Set1')
-    plt.title(f'Scatter Plot: {selected_features[0]} vs {selected_features[1]}')
-    plt.xlabel(selected_features[0])
-    plt.ylabel(selected_features[1])
-    st.pyplot(plt)
-
+    fig = px.scatter(diabetes_data, x=selected_features[0], y=selected_features[1], color='Outcome', title=f'Scatter Plot: {selected_features[0]} vs {selected_features[1]}')
+    st.plotly_chart(fig)
 elif len(selected_features) > 2:
     st.error('You have selected more than two features! Consider removing some.')
 else:
     st.warning('Select exactly two features to visualize.')
 
-# Correlation Matrix
+# Correlation Matrix using Plotly
 st.write('### Correlation Matrix')
-plt.figure(figsize=(10, 8))
-sns.heatmap(diabetes_data.corr(), annot=True, cmap='coolwarm', fmt=".2f")
-plt.title('Correlation Matrix')
-st.pyplot(plt)
-
+corr = diabetes_data.corr()
+fig = px.imshow(corr, text_auto=True, color_continuous_scale='RdBu_r', aspect='auto')
+fig.update_layout(title='Correlation Matrix')
+st.plotly_chart(fig)
