@@ -8,7 +8,7 @@ This project is a web application built using Streamlit, a Python library for cr
 
 ## Demo
 
-A live demo of the app can be found [here](https://ayush-dass-diabetes-prediction-m-diabetes-prediction-app-jdnxzb.streamlit.app/)
+A live demo of the app can be found [here](https://ayush-dass-diabetes-prediction-m-diabetes-prediction-app-2jc3du.streamlit.app/)
 
 ## Features
 
