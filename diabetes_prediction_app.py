@@ -102,7 +102,7 @@ fig = go.Figure(data=go.Heatmap(
                    texttemplate="%{text}",
                    textfont={"size":15}))
 
-fig.update_layout(title='Confusion Matrix', xaxis_title='Predicted Label', yaxis_title='True Label')
+fig.update_layout(xaxis_title='Predicted Label', yaxis_title='True Label')
 st.plotly_chart(fig)
 
 # Display learning curves using Plotly
@@ -110,7 +110,7 @@ st.write('### Learning Curves')
 fig = go.Figure()
 fig.add_trace(go.Scatter(x=train_sizes, y=np.mean(train_scores, axis=1), mode='lines', name='Training Accuracy'))
 fig.add_trace(go.Scatter(x=train_sizes, y=np.mean(test_scores, axis=1), mode='lines', name='Validation Accuracy'))
-fig.update_layout(title='Learning Curves', xaxis_title='Training Examples', yaxis_title='Accuracy')
+fig.update_layout(xaxis_title='Training Examples', yaxis_title='Accuracy')
 st.plotly_chart(fig)
 
 # Data visualization - Histogram using Plotly
@@ -137,5 +137,5 @@ else:
 st.write('### Correlation Matrix')
 corr = diabetes_data.corr()
 fig = px.imshow(corr, text_auto=True, color_continuous_scale='RdBu_r', aspect='auto')
-fig.update_layout(title='Correlation Matrix')
+fig.update_layout()
 st.plotly_chart(fig)
